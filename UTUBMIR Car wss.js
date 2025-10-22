@@ -9,7 +9,8 @@ const translations = {
         "_distance": "дистанция",
         "_on": "включено",
         "_off": "выключено",
-        "_headlights[STATE]": "фары[STATE]"
+        "_headlights[STATE]": "фары[STATE]",
+        "_drive [DISTANCE]cm": "ехать[DISTANCE]см"
     },
     "uk": {
         "_set car URL to [URL]": "встановити URL машини на [URL]",
@@ -21,7 +22,8 @@ const translations = {
         "_distance": "дистанція",
         "_on": "увімкнено",
         "_off": "вимкнено",
-        "_headlights[STATE]": "фари[STATE]"
+        "_headlights[STATE]": "фари[STATE]",
+        "_drive [DISTANCE]cm": "їхати[DISTANCE]см"
     },
     "nb": {
         "_set car URL to [URL]": "sett bilens URL til [URL]",
@@ -33,7 +35,8 @@ const translations = {
         "_distance": "avstand",
         "_on": "på",
         "_off": "av",
-        "_headlights[STATE]": "lykter[STATE]"
+        "_headlights[STATE]": "lykter[STATE]",
+        "_drive [DISTANCE]cm": "kjøre[DISTANCE]cm"
     }
 };
 Scratch.translate.setup(translations);
@@ -45,6 +48,7 @@ Scratch.translate.setup(translations);
     let carUrl = "";
     let socket = null;
     let distance = 0;
+    let speed = 24.6;
 
     const reverseLookup = {};
 
@@ -59,7 +63,7 @@ Scratch.translate.setup(translations);
     }
 
     async function loadSocketIO() {
-        if (window.io) return; // вже завантажено
+        if (window.io) return;
         return new Promise((resolve, reject) => {
             const script = document.createElement("script");
             script.src = "https://cdn.socket.io/4.7.2/socket.io.min.js";
@@ -92,6 +96,11 @@ Scratch.translate.setup(translations);
             });
         });
     }
+
+    function delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
 
     function sendCommand(cmd) {
         if (!socket || !socket.connected) {
@@ -130,6 +139,21 @@ Scratch.translate.setup(translations);
                             }
                         }
                     },
+                    // {
+                    //     opcode: "waitUntilDistance",
+                    //     blockType: Scratch.BlockType.COMMAND,
+                    //     text: Scratch.translate("wait until distance[OPERATOR][DISTANCE]cm"),
+                    //     arguments: {
+                    //         OPERATOR: {
+                    //             type: Scratch.ArgumentType.STRING,
+                    //             menu: "operatorStates"
+                    //         },
+                    //         DISTANCE: {
+                    //             type: Scratch.ArgumentType.NUMBER,
+                    //             defaultValue: 100
+                    //         }
+                    //     }
+                    // },
                     {
                         opcode: "measureDistance",
                         blockType: Scratch.BlockType.COMMAND,
@@ -170,6 +194,17 @@ Scratch.translate.setup(translations);
                         }
                     },
                     {
+                        opcode: "driveDistance",
+                        blockType: Scratch.BlockType.COMMAND,
+                        text: Scratch.translate("drive [DISTANCE]cm"),
+                        arguments: {
+                            DISTANCE: {
+                                type: Scratch.ArgumentType.NUMBER,
+                                defaultValue: 20
+                            }
+                        }
+                    },
+                    {
                         opcode: "look",
                         blockType: Scratch.BlockType.COMMAND,
                         text: Scratch.translate("look in direction:[ANGLE]"),
@@ -196,6 +231,10 @@ Scratch.translate.setup(translations);
                     boolStates: {
                         acceptReporters: true,
                         items: [Scratch.translate("on"), Scratch.translate("off")]
+                    },
+                    operatorStates: {
+                        acceptReporters: true,
+                        items: ["<", ">"]
                     }
                 }
             };
@@ -209,6 +248,11 @@ Scratch.translate.setup(translations);
             distance = +(ack.distance_cm);
         }
 
+        // async waitUntilDistance({OPERATOR, DISTANCE}) {
+
+        // }
+
+
         async drive({ LEFT_SPEED, RIGHT_SPEED }) {
             const left = Math.round(Math.max(-90, Math.min(90, LEFT_SPEED)));
             const right = Math.round(Math.max(-90, Math.min(90, RIGHT_SPEED)));
@@ -219,7 +263,26 @@ Scratch.translate.setup(translations);
             const timer = Math.round(Math.max(0, SECONDS * 1000.0));
             const left = Math.round(Math.max(-90, Math.min(90, LEFT_SPEED)));
             const right = Math.round(Math.max(-90, Math.min(90, RIGHT_SPEED)));
+
             await sendCommand({ action: "drive", left, right, timer });
+            await delay(timer);
+        }
+
+        async driveDistance({ DISTANCE }) {
+            let left, right;
+            if (DISTANCE != 0) {
+                if (DISTANCE > 0) {
+                    left = 90;
+                    right = 90;
+                }
+                else {
+                    left = -90;
+                    right = -90;
+                }
+                let timer = Math.round((Math.abs(DISTANCE) / speed) * 1000.0);
+                await sendCommand({ action: "drive", left, right,  timer});
+                await delay(timer);
+            }
         }
 
         async look({ ANGLE }) {
@@ -233,10 +296,12 @@ Scratch.translate.setup(translations);
         }
 
         async setCarUrl({ URL }) {
-            carUrl = URL;
+            if (carUrl != URL || !socket || !socket.connected) {
+                carUrl = URL;
 
-            await loadSocketIO();
-            await connect(carUrl);
+                await loadSocketIO();
+                await connect(carUrl);
+            }
         }
     }
 
