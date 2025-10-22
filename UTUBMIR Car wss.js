@@ -275,11 +275,11 @@ Scratch.translate.setup(translations);
             let left, right;
             if (DISTANCE != 0) {
                 if (DISTANCE > 0) {
-                    left = 90;
+                    left = 65;
                     right = 90;
                 }
                 else {
-                    left = -90;
+                    left = -65;
                     right = -90;
                 }
                 let timer = Math.round((Math.abs(DISTANCE) / speed) * 1000.0);
