@@ -264,8 +264,11 @@ Scratch.translate.setup(translations);
             const left = Math.round(Math.max(-90, Math.min(90, LEFT_SPEED)));
             const right = Math.round(Math.max(-90, Math.min(90, RIGHT_SPEED)));
 
+            const start = performance.now();
             await sendCommand({ action: "drive", left, right, timer });
-            await delay(timer);
+            const end = performance.now();
+             
+            await delay(timer - (end - start));
         }
 
         async driveDistance({ DISTANCE }) {
@@ -280,7 +283,7 @@ Scratch.translate.setup(translations);
                     right = -90;
                 }
                 let timer = Math.round((Math.abs(DISTANCE) / speed) * 1000.0);
-                await sendCommand({ action: "drive", left, right,  timer});
+                await sendCommand({ action: "drive", left, right, timer });
                 await delay(timer);
             }
         }
